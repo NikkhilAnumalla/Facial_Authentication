@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <h2 class="text-center mb-4">Login</h2>
+
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <ul class="nav nav-tabs mb-4" id="loginTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="facial-tab" data-bs-toggle="tab" data-bs-target="#facial" type="button" role="tab" aria-controls="facial" aria-selected="true">Facial Recognition</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="password-tab" data-bs-toggle="tab" data-bs-target="#password" type="button" role="tab" aria-controls="password" aria-selected="false">Password Login</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="loginTabsContent">
+        <!-- Facial Recognition Login Tab -->
+        <div class="tab-pane fade show active" id="facial" role="tabpanel" aria-labelledby="facial-tab">
+            <div class="text-center mb-4">
+                <p>Look at the camera and position your face properly</p>
+            </div>
+
+            <form id="facial-login-form" action="{{ url_for('login') }}" method="post">
+                <input type="hidden" name="login_method" value="facial">
+
+                <div class="webcam-container">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="d-grid gap-2">
+                        <button type="button" id="capture-btn" class="btn btn-primary camera-btn">Capture for Login</button>
+                        <button type="button" id="retake-btn" class="btn btn-secondary camera-btn hidden">Retake Photo</button>
+                    </div>
+                    <canvas id="canvas" class="hidden"></canvas>
+                    <img id="captured-image" class="mt-3 hidden" alt="Captured image">
+                    <input type="hidden" id="image_data" name="image_data">
+                </div>
+
+                <div class="d-grid gap-2 mt-3">
+                    <button type="submit" id="facial-login-btn" class="btn btn-success" disabled>Login with Face</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Password Login Tab -->
+        <div class="tab-pane fade" id="password" role="tabpanel" aria-labelledby="password-tab">
+            <form id="password-login-form" action="{{ url_for('login') }}" method="post">
+                <input type="hidden" name="login_method" value="password">
+
+                <div class="mb-3">
+                    <label for="user_id" class="form-label">User ID</label>
+                    <input type="text" class="form-control" id="user_id" name="user_id" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success">Login with Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const capturedImage = document.getElementById('captured-image');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const facialLoginBtn = document.getElementById('facial-login-btn');
+        const imageDataInput = document.getElementById('image_data');
+        const facialTab = document.getElementById('facial-tab');
+
+        let stream = null;
+
+        // Start webcam on page load and when facial tab is selected
+        startWebcam();
+        facialTab.addEventListener('click', startWebcam);
+
+        function startWebcam() {
+            // First stop any existing stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(mediaStream) {
+                        stream = mediaStream;
+                        video.srcObject = mediaStream;
+                        video.play();
+                        video.classList.remove('hidden');
+                        capturedImage.classList.add('hidden');
+                        captureBtn.classList.remove('hidden');
+                        retakeBtn.classList.add('hidden');
+                        facialLoginBtn.disabled = true;
+                    })
+                    .catch(function(error) {
+                        console.error('Could not access webcam: ', error);
+                        alert('Could not access webcam. Please ensure you have granted permission or use password login.');
+                    });
+            } else {
+                alert('Your browser does not support webcam access. Please use password login.');
+            }
+        }
+
+        // Stop webcam when switching to password tab
+        document.getElementById('password-tab').addEventListener('click', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Capture photo
+        captureBtn.addEventListener('click', function() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to image
+            const dataUrl = canvas.toDataURL('image/jpeg');
+            capturedImage.src = dataUrl;
+            imageDataInput.value = dataUrl;
+
+            // Show captured image and retake button
+            video.classList.add('hidden');
+            capturedImage.classList.remove('hidden');
+            captureBtn.classList.add('hidden');
+            retakeBtn.classList.remove('hidden');
+            facialLoginBtn.disabled = false;
+
+            // Stop the webcam stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Retake photo
+        retakeBtn.addEventListener('click', function() {
+            startWebcam();
+            imageDataInput.value = '';
+        });
+
+        // Form validation for facial login
+        document.getElementById('facial-login-form').addEventListener('submit', function(event) {
+            const imageData = imageDataInput.value;
+
+            if (!imageData) {
+                alert('Please capture your face image for authentication');
+                event.preventDefault();
+                return;
+            }
+        });
+
+        // Form validation for password login
+        document.getElementById('password-login-form').addEventListener('submit', function(event) {
+            const userId = document.getElementById('user_id').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!userId || !password) {
+                alert('Please enter both User ID and Password');
+                event.preventDefault();
+                return;
+            }
+        });
+    });
+</script>
+{% endblock %}

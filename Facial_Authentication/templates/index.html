@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="jumbotron text-center">
+    <h1 class="display-4">Welcome to Facial Authentication System</h1>
+    <p class="lead">Secure access using facial recognition technology</p>
+    <hr class="my-4">
+    <p>Get started by registering your face or logging in if you're already registered.</p>
+    <div class="d-flex justify-content-center gap-3">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('register') }}" role="button">Register</a>
+        <a class="btn btn-success btn-lg" href="{{ url_for('login') }}" role="button">Login</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <h2 class="text-center mb-4">Register New User</h2>
+    
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    
+    <form id="register-form" action="{{ url_for('register') }}" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="user_id" class="form-label">User ID</label>
+            <input type="text" class="form-control" id="user_id" name="user_id" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Face Image (Optional but recommended for facial recognition)</label>
+
+            <ul class="nav nav-tabs" id="imageTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" aria-controls="upload" aria-selected="true">Upload Image</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="webcam-tab" data-bs-toggle="tab" data-bs-target="#webcam" type="button" role="tab" aria-controls="webcam" aria-selected="false">Take Photo</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="imageTabsContent">
+                <!-- Upload Image Tab -->
+                <div class="tab-pane fade show active" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+                    <div class="mb-3 mt-3">
+                        <input type="file" class="form-control" id="image_upload" name="image_upload" accept="image/*">
+                    </div>
+                </div>
+
+                <!-- Take Photo Tab -->
+                <div class="tab-pane fade" id="webcam" role="tabpanel" aria-labelledby="webcam-tab">
+                    <div class="webcam-container mt-3">
+                        <video id="video" autoplay playsinline></video>
+                        <div class="d-grid gap-2">
+                            <button type="button" id="capture-btn" class="btn btn-primary camera-btn">Capture Photo</button>
+                            <button type="button" id="retake-btn" class="btn btn-secondary camera-btn hidden">Retake Photo</button>
+                        </div>
+                        <canvas id="canvas" class="hidden"></canvas>
+                        <img id="captured-image" class="mt-3 hidden" alt="Captured image">
+                        <input type="hidden" id="image_data" name="image_data">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-success">Register</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const capturedImage = document.getElementById('captured-image');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const imageDataInput = document.getElementById('image_data');
+        const webcamTab = document.getElementById('webcam-tab');
+
+        let stream = null;
+
+        // Start webcam when webcam tab is selected
+        webcamTab.addEventListener('click', startWebcam);
+
+        function startWebcam() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(mediaStream) {
+                        stream = mediaStream;
+                        video.srcObject = mediaStream;
+                        video.play();
+                        video.classList.remove('hidden');
+                        capturedImage.classList.add('hidden');
+                        captureBtn.classList.remove('hidden');
+                        retakeBtn.classList.add('hidden');
+                    })
+                    .catch(function(error) {
+                        console.error('Could not access webcam: ', error);
+                        alert('Could not access webcam. Please ensure you have granted permission or try using the upload option.');
+                    });
+            } else {
+                alert('Your browser does not support webcam access. Please use the upload option.');
+            }
+        }
+
+        // Capture photo
+        captureBtn.addEventListener('click', function() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to image
+            const dataUrl = canvas.toDataURL('image/jpeg');
+            capturedImage.src = dataUrl;
+            imageDataInput.value = dataUrl;
+
+            // Show captured image and retake button
+            video.classList.add('hidden');
+            capturedImage.classList.remove('hidden');
+            captureBtn.classList.add('hidden');
+            retakeBtn.classList.remove('hidden');
+
+            // Stop the webcam stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Retake photo
+        retakeBtn.addEventListener('click', function() {
+            startWebcam();
+            imageDataInput.value = '';
+        });
+
+        // Form validation
+        document.getElementById('register-form').addEventListener('submit', function(event) {
+            const userId = document.getElementById('user_id').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!userId || !password) {
+                alert('Please enter both User ID and Password');
+                event.preventDefault();
+                return;
+            }
+        });
+    });
+</script>
+{% endblock %}
