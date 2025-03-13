@@ -1,0 +1,13 @@
+# Ignore pickle files
+*.pickle
+*.pkl
+
+# Ignore JSON files
+*.json
+
+# Common Python ignores
+__pycache__/
+*.py[cod]
+*$py.class
+.idea/
+venv/
