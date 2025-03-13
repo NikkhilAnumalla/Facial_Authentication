@@ -1,0 +1,7 @@
+Flask==2.0.1
+opencv-python==4.5.3
+numpy==1.21.2
+deepface==0.0.75
+scikit-learn==1.0
+Werkzeug==2.0.1
+pathlib==1.0.1
